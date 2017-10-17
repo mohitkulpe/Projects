@@ -1,0 +1,33 @@
+
+Page Ranks of Documents in Input File ' test1.txt ' with Teleportation rate α = 0.15
+
+Document List according to their Page Rank:
+
+Documents  Page Rank
+---------  ---------------
+Doc 4      0.0903374651399
+Doc 1      0.0991028452746
+Doc 3      0.13267406923
+Doc 2      0.18885233802
+Doc 0      0.239033282336
+
+
+
+Page Ranks of Documents in Input File ' test2.txt ' with Teleportation rate α = 0.15
+
+Document List according to their Page Rank:
+
+Documents  Page Rank
+---------  ---------------
+Doc 4      0.036652519736
+Doc 6      0.036652519736
+Doc 0      0.121691280422
+Doc 7      0.129487157442
+Doc 2      0.142245407591
+Doc 1      0.189921869364
+Doc 3      0.202680119512
+Doc 5      0.20876541816
+Doc 9      0.213750822106
+Doc 8      0.218152885931
+
+

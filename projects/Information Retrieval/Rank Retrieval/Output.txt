@@ -1,0 +1,191 @@
+
+Results for the Query:  with AND without AND yemen
+
+Exact Top K Retrieval:
+Text-10.txt
+Text-36.txt
+Text-267.txt
+Text-195.txt
+Text-234.txt
+Text-344.txt
+Text-99.txt
+Text-86.txt
+Text-159.txt
+Text-115.txt
+List Retrieved in 0.0002391338 seconds
+
+Inexact Top K Retrieval (champion List):
+Text-10.txt
+Text-36.txt
+Text-234.txt
+Text-100.txt
+Text-86.txt
+Text-159.txt
+Text-115.txt
+Text-117.txt
+Text-226.txt
+Text-267.txt
+List Retrieved in 0.0001826286 seconds
+
+Inexact Top K Retrieval (Index Elimination):
+Text-10.txt
+Text-36.txt
+Text-267.txt
+Text-195.txt
+Text-234.txt
+Text-344.txt
+Text-99.txt
+Text-100.txt
+Text-226.txt
+Text-86.txt
+List Retrieved in 0.0000541210 seconds
+
+Inexact Top K Retrieval (Cluster Pruning):
+List Retrieved in 0.0000264645 seconds
+
+['Text-99.txt', 'Text-267.txt', 'Text-395.txt', 'Text-195.txt', 'Text-408.txt', 'Text-294.txt', 'Text-29.txt', 'Text-338.txt', 'Text-233.txt', 'Text-388.txt']
+
+Results for the Query:  with AND without AND yemen AND yemeni
+
+Exact Top K Retrieval:
+Text-10.txt
+Text-195.txt
+Text-267.txt
+Text-99.txt
+Text-344.txt
+Text-100.txt
+Text-121.txt
+Text-36.txt
+Text-234.txt
+Text-86.txt
+List Retrieved in 0.0001749992 seconds
+
+Inexact Top K Retrieval (champion List):
+Text-10.txt
+Text-195.txt
+Text-267.txt
+Text-99.txt
+Text-344.txt
+Text-100.txt
+Text-36.txt
+Text-121.txt
+Text-234.txt
+Text-86.txt
+List Retrieved in 0.0002734661 seconds
+
+Inexact Top K Retrieval (Index Elimination):
+Text-10.txt
+Text-195.txt
+Text-267.txt
+Text-344.txt
+Text-99.txt
+Text-100.txt
+Text-36.txt
+Text-121.txt
+Text-234.txt
+Text-226.txt
+List Retrieved in 0.0000803471 seconds
+
+Inexact Top K Retrieval (Cluster Pruning):
+List Retrieved in 0.0000407696 seconds
+
+['Text-99.txt', 'Text-267.txt', 'Text-395.txt', 'Text-195.txt', 'Text-408.txt', 'Text-294.txt', 'Text-29.txt', 'Text-338.txt', 'Text-233.txt', 'Text-388.txt']
+
+Results for the Query:  berlin AND poland AND szczecin AND obacz AND plane
+
+Exact Top K Retrieval:
+Text-299.txt
+Text-102.txt
+Text-279.txt
+Text-74.txt
+Text-317.txt
+Text-239.txt
+Text-266.txt
+Text-419.txt
+Text-19.txt
+Text-237.txt
+List Retrieved in 0.0002305508 seconds
+
+Inexact Top K Retrieval (champion List):
+Text-299.txt
+Text-279.txt
+Text-19.txt
+Text-237.txt
+Text-102.txt
+Text-67.txt
+Text-51.txt
+Text-82.txt
+Text-224.txt
+Text-350.txt
+List Retrieved in 0.0001878738 seconds
+
+Inexact Top K Retrieval (Index Elimination):
+Text-299.txt
+List Retrieved in 0.0000340939 seconds
+
+Inexact Top K Retrieval (Cluster Pruning):
+List Retrieved in 0.0000374317 seconds
+
+['Text-81.txt', 'Text-167.txt', 'Text-97.txt', 'Text-380.txt', 'Text-203.txt', 'Text-374.txt', 'Text-390.txt', 'Text-214.txt', 'Text-385.txt', 'Text-51.txt']
+
+Results for the Query:  abc AND pqr AND xyz
+
+Exact Top K Retrieval:
+List Retrieved in 0.0000343323 seconds
+
+Inexact Top K Retrieval (champion List):
+List Retrieved in 0.0000267029 seconds
+
+Inexact Top K Retrieval (Index Elimination):
+List Retrieved in 0.0000350475 seconds
+
+Inexact Top K Retrieval (Cluster Pruning):
+List Retrieved in 0.0000147820 seconds
+
+[]
+
+Results for the Query:  million AND billion
+
+Exact Top K Retrieval:
+Text-420.txt
+Text-50.txt
+Text-378.txt
+Text-92.txt
+Text-254.txt
+Text-222.txt
+Text-43.txt
+Text-247.txt
+Text-188.txt
+Text-411.txt
+List Retrieved in 0.0002093315 seconds
+
+Inexact Top K Retrieval (champion List):
+Text-50.txt
+Text-411.txt
+Text-43.txt
+Text-228.txt
+Text-54.txt
+Text-388.txt
+Text-89.txt
+Text-420.txt
+Text-378.txt
+Text-92.txt
+List Retrieved in 0.0001752377 seconds
+
+Inexact Top K Retrieval (Index Elimination):
+Text-420.txt
+Text-92.txt
+Text-254.txt
+Text-378.txt
+Text-50.txt
+Text-247.txt
+Text-222.txt
+Text-411.txt
+Text-228.txt
+Text-54.txt
+List Retrieved in 0.0000569820 seconds
+
+Inexact Top K Retrieval (Cluster Pruning):
+List Retrieved in 0.0000257492 seconds
+
+['Text-89.txt', 'Text-402.txt', 'Text-254.txt', 'Text-48.txt', 'Text-13.txt', 'Text-53.txt', 'Text-135.txt', 'Text-228.txt', 'Text-142.txt', 'Text-174.txt']
