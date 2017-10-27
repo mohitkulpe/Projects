@@ -1,0 +1,447 @@
+---
+title: "OPD classification Project"
+author: "Mohit kulpe"
+date: "October 14, 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Objective :
+##classifying patients to one out of two categories, Normal or Abnormal. Use biomechanical features to classify patients according to their Class by using Multiple Logistic Regression Algorithm.   
+
+## Approach:-  
+**1. Check Missing Values 'NA'**  
+**2. Correlations between variables**  
+**3. Visualize Highly Correlated variables**  
+**4. Checking Outliers**  
+**5. Handling Outliers**  
+**6. Summarizing datasets**  
+**7. Model Fitting**  
+**8. Overall fraction of correct predictions (Accuracy)**  
+**9. Trying to increase fraction of correct predictions (Accuracy)**  
+**10. Cross Validation**  
+**11. Plotting ROC**  
+**12. Testing Model on random data**   
+
+### References:  
+*https://www.kaggle.com/uciml/biomechanical-features-of-orthopedic-patients*  
+Dataset-* http://archive.ics.uci.edu/ml/datasets/vertebral+column*    
+
+# 1. Loading Data
+
+```{r load_data}
+
+library(ISLR)
+library(MASS)
+
+mydata <- read.csv('OPD_2C.csv')
+
+head(mydata)
+dim(mydata)
+```
+There are 310 observations (Rows) & 7 Columns  
+
+
+# 1. Checking for Missing Values 'NA'  
+
+```{r NA}
+
+sum(is.na(mydata))
+```
+
+There are no Missing Values.   
+
+
+# 2. Correlations between variables
+
+```{r corr}
+
+cor(mydata[1:6])
+
+```
+Features pelvic_incidence & sacral_slope are highly correlated with positive correlation value = 0.8149600.   
+
+# 3. Visualize Highly Correlated variables    
+```{r plo1}
+library(ggplot2)
+library(gridExtra)
+
+x <- qplot(x=mydata$pelvic_incidence, y=mydata$sacral_slope, color=mydata$class, shape=mydata$class, geom='point', main = 'pelvic_incidence vs sacral_slope', ylab = 'sacral_slope', xlab = 'pelvic_incidence')+scale_shape(solid=FALSE)
+x
+```
+     
+The plot shows that there are Outliers present in data, as the three values are far away from rest values.   
+
+**There might be Outliers in each Feature, So let's Check Outliers in each feature.   **
+
+
+# 4. Checking Outliers       
+
+### I will mark Outliers as a value which is 3 standard deviations away from the Mean.  
+
+```{r outlier}
+
+# Checking Outliers in pelvic_incidence
+
+urange1 = mean(mydata$pelvic_incidence)+3*sd(mydata$pelvic_incidence)
+
+lrange1 = mean(mydata$pelvic_incidence)-3*sd(mydata$pelvic_incidence)
+
+o1 = which(mydata$pelvic_incidence < lrange1 | mydata$pelvic_incidence > urange1)
+
+
+# Checking Outliers in pelvic_tilt.numeric 
+urange2 = mean(mydata$pelvic_tilt.numeric)+3*sd(mydata$pelvic_tilt.numeric)
+
+lrange2 = mean(mydata$pelvic_tilt.numeric)-3*sd(mydata$pelvic_tilt.numeric)
+
+o2 = which(mydata$pelvic_tilt.numeric < lrange2 | mydata$pelvic_tilt.numeric > urange2)
+
+outlier <- append(o1,o2)
+
+
+# Checking Outliers in pelvic_radius 
+urange3 = mean(mydata$pelvic_radius)+3*sd(mydata$pelvic_radius)
+
+lrange3 = mean(mydata$pelvic_radius)-3*sd(mydata$pelvic_radius)
+
+o3 = which(mydata$pelvic_radius < lrange3 | mydata$pelvic_radius > urange3)
+
+outlier <- append(outlier,o3)
+
+
+# Checking Outliers in lumbar_lordosis_angle 
+urange4 = mean(mydata$lumbar_lordosis_angle)+3*sd(mydata$lumbar_lordosis_angle)
+
+lrange4 = mean(mydata$lumbar_lordosis_angle)-3*sd(mydata$lumbar_lordosis_angle)
+
+o4 = which(mydata$lumbar_lordosis_angle < lrange4 | mydata$lumbar_lordosis_angle > urange4)
+
+outlier <- append(outlier,o4)
+
+
+# Checking Outliers in sacral_slope 
+urange5 = mean(mydata$sacral_slope)+3*sd(mydata$sacral_slope)
+
+lrange5 = mean(mydata$sacral_slope)-3*sd(mydata$sacral_slope)
+
+o5 = which(mydata$sacral_slope < lrange5 | mydata$sacral_slope > urange5)
+
+outlier <- append(outlier,o5)
+
+
+# Checking Outliers in degree_spondylolisthesis 
+urange6 = mean(mydata$degree_spondylolisthesis)+3*sd(mydata$degree_spondylolisthesis)
+
+lrange6 = mean(mydata$degree_spondylolisthesis)-3*sd(mydata$degree_spondylolisthesis)
+
+o6 = which(mydata$degree_spondylolisthesis < lrange6 | mydata$degree_spondylolisthesis > urange6)
+
+outlier <- append(outlier,o6)
+
+
+
+# Outlier present in data with respect to row numbers
+
+uni <- sort(unique(outlier))
+uni
+```
+
+**There are total 11 rows in which outliers are present.**        
+
+
+# 5. Handling Outliers   
+
+## By using two techniques:  
+### 1. By deleting entire row in which outlier is present.  
+### 2. By replacing outlier with Median.  
+
+
+### 1.Delete Entire Row 
+
+```{r outlier 1}
+newdata <- mydata[-uni,]
+dim(newdata)
+```    
+
+We have deleted 11 rows (310 - 11 = 299).   
+
+
+###2. Replace by Median  
+
+#### Here we will use original copy of dataset.   
+
+```{r outlier 2}
+
+mydata1 <- read.csv('OPD_2C.csv')
+
+#replace by Median 1
+mydata1$pelvic_incidence[which(mydata1$pelvic_incidence < lrange1 | mydata1$pelvic_incidence > urange1)] <- median(mydata1$pelvic_incidence)
+
+#replace by Median 2
+mydata1$pelvic_tilt.numeric[which(mydata1$pelvic_tilt.numeric < lrange2 | mydata1$pelvic_tilt.numeric > urange2)] <- median(mydata1$pelvic_tilt.numeric)
+
+#replace by Median 3
+mydata1$pelvic_radius[which(mydata1$pelvic_radius < lrange3 | mydata1$pelvic_radius > urange3)] <- median(mydata1$pelvic_radius)
+
+#replace by Median 4
+mydata1$lumbar_lordosis_angle[which(mydata1$lumbar_lordosis_angle < lrange4 | mydata1$lumbar_lordosis_angle > urange4)] <- median(mydata1$lumbar_lordosis_angle)
+
+#replace by Median 5
+mydata1$sacral_slope[which(mydata1$sacral_slope < lrange5 | mydata1$sacral_slope > urange5)] <- median(mydata1$sacral_slope)
+
+#replace by Median 6
+mydata1$degree_spondylolisthesis[which(mydata1$degree_spondylolisthesis < lrange6 | mydata1$degree_spondylolisthesis > urange6)] <- median(mydata1$degree_spondylolisthesis)
+
+```   
+
+# Now we have three different datasets:   
+### 1. Data with Outliers  
+### 2. Data without Outliers (Row Deletion Method)  
+### 3. Data without Outliers (Replace with Median Method)  
+
+# 6. Summarizing datasets   
+
+``` {r summary 1}
+
+# Summary of Dataset without outliers
+summary(mydata)
+summary(newdata)
+summary(mydata1)
+
+```
+**By Analyzing Summary we can say that third dataset i.e.dataset in which Outliers are handled by replacing by Median  will be the best choice, because Stats of third dataset are close to Original dataset compare to second dataset.**    
+
+
+# 7. Model Fitting  
+
+## Fitting Model using Logistic Regression & Three datasets   
+
+```{r glm 1}
+
+# Fit logistic regression with all features & dataset with outliers
+glm.fit_mydata <- glm(class ~ . ,data=mydata ,family=binomial)
+summary(glm.fit_mydata)
+
+# Fit logistic regression with all features & dataset without outliers (Row deletion method)
+glm.fit_newdata <- glm(class ~ . ,data=newdata ,family=binomial)
+summary(glm.fit_newdata)
+
+# Fit logistic regression with all features & dataset without outliers (Median replace method)
+glm.fit_mydata1 <- glm(class ~ . ,data=mydata1 ,family=binomial)
+summary(glm.fit_mydata1)
+
+```
+
+
+# 8. Overall fraction of correct predictions   
+
+### Overall fraction of correct predictions with all features & dataset with outliers.   
+
+```{r ofc 1}
+
+probability_mydata <- predict(glm.fit_mydata, type = "response")
+
+pred_mydata <- rep("Abnormal", length(probability_mydata))
+pred_mydata[probability_mydata > 0.5] <- "Normal"
+
+#Confusion Matrix
+table(pred_mydata, mydata$class)
+mean(pred_mydata == mydata$class )
+
+```
+
+**Overall fraction of correct predictions is 0.8483 (84.83%).**   
+
+
+
+### Overall fraction of correct predictions all features & dataset without outliers (Row deletion method)  
+
+```{r ofc 2}
+
+probability_newdata <- predict(glm.fit_newdata, type = "response")
+
+pred_newdata <- rep("Abnormal", length(probability_newdata))
+pred_newdata[probability_newdata > 0.5] <- "Normal"
+
+#Confusion Matrix
+table(pred_newdata, newdata$class)
+
+mean(pred_newdata == newdata$class)
+
+```
+
+**Overall fraction of correct predictions is 0.8428 (84.28%).**    
+
+
+### Overall fraction of correct predictions with all features & dataset without outliers (Median replace method)   
+
+```{r ofc 3}
+
+probability_mydata1 <- predict(glm.fit_mydata1, type = "response")
+
+pred_mydata1 <- rep("Abnormal", length(probability_mydata1))
+pred_mydata1[probability_mydata1 > 0.5] <- "Normal"
+
+#Confusion Matrix
+table(pred_mydata1, mydata1$class)
+
+mean(pred_mydata1 == mydata1$class)
+
+```
+
+
+**Overall fraction of correct predictions is 0.8580 (85.80%).**    
+
+
+#### Multiple Logistic Linear Regression Model with all features & dataset without outliers (Median replace method) gives 0.8580 overall fraction of correct predictions.    
+
+#### This implies that replacing Outliers with Median is better method than just deleting observation having Outlier.    
+
+
+### Now We will select Model [glm(class ~ . ,data=mydata1 ,family=binomial)] with third dataset for further use.    
+
+  
+# 9. Trying to increase fraction of correct predictions:    
+## Deciding Important Feature to increase fraction of correct predictions.    
+     
+
+```{r summary 2}
+
+summary(glm.fit_mydata1)
+
+```
+
+
+## Selecting Important Feature by using Backward Selection Method  
+
+**Summary shows that pelvic_radius & degree_spondylolisthesis are significant features because their p-value is < 0.05.**  
+
+#### So we will use pelvic_radius & degree_spondylolisthesis in this model.   
+
+```{r glm 2}
+# Subset selection 1
+
+glm.fit_mydata1_1 <- glm(class ~ pelvic_radius+degree_spondylolisthesis ,data=mydata1 ,family=binomial)
+
+probability_mydata1_1 <- predict(glm.fit_mydata1_1, type = "response")
+
+pred_mydata1_1 <- rep("Abnormal", length(probability_mydata1_1))
+pred_mydata1_1[probability_mydata1_1 > 0.5] <- "Normal"
+table(pred_mydata1_1, mydata1$class)
+
+mean(pred_mydata1_1 == mydata1$class )
+
+```
+
+**Overall fraction of correct predictions is 0.7967 (79.67 %).**     
+
+#### Now we will try another combination of pelvic_incidence, lumbar_lordosis, pelvic_radius & degree_spondylolisthesis because these 4 features have p-value close to zero.   
+
+```{r glm 3}
+#Subset selection 2
+
+glm.fit_mydata1_2 <- glm(class ~ pelvic_incidence+lumbar_lordosis_angle+pelvic_radius+degree_spondylolisthesis ,data=mydata1 ,family=binomial)
+
+probability_mydata1_2 <- predict(glm.fit_mydata1_2, type = "response")
+
+pred_mydata1_2 <- rep("Abnormal", length(probability_mydata1_2))
+pred_mydata1_2[probability_mydata1_2 > 0.5] <- "Normal"
+table(pred_mydata1_2, mydata1$class)
+
+mean(pred_mydata1_2 == mydata1$class )
+
+```
+
+**Overall fraction of correct predictions is 0.8161 (81.61 %).**     
+
+## Model with all features gives high accuracy of 85.80 %.    
+
+### We will select Model [glm(class ~ . ,data=mydata1 ,family=binomial)]   
+
+
+**But This OFCP is misleading because we trained and tested model on the same set of observations.**     
+**In other words, 100 - 85.80 = 14.20 % is the training error rate.**     
+**The error rate is often overly optimistic it tends to underestimate the test error rate.**    
+
+# 10. Cross Validation  
+
+### Split data into Training (80%) & Test (20%)     
+
+```{r split}
+
+set.seed(1)
+subset <- sample(nrow(mydata1), nrow(mydata1) * 0.8)
+train_mydata1 = mydata1[subset, ]
+test_mydata1 = mydata1[-subset, ]
+
+```
+
+
+### Fitting Model with Training Dataset.   
+
+```{r glm 4}
+
+set.seed(1)
+glm.train_mydata1 <- glm(class ~ ., data=train_mydata1,family = binomial)
+
+train_mydata1.probability <- predict(glm.train_mydata1, test_mydata1, type="response")
+train_mydata1_class <- ifelse(train_mydata1.probability > 0.5, 'Normal', 'Abnormal')
+table(test_mydata1$class, train_mydata1_class)
+
+mean(train_mydata1_class == test_mydata1$class)
+
+```
+
+**Overall fraction of correct predictions is 0.8064 (80.64 %)**   
+
+### This is the accuracy of our Model i.e 80.64%.   
+
+
+# 11. Plotting ROC   
+
+```{r plot 2}
+
+library(ROCR) 
+library(Metrics)
+
+pr <- prediction(train_mydata1.probability, test_mydata1$class)
+perf <- performance(pr,measure = "tpr",x.measure = "fpr")
+par(mfrow = c(1,1))
+plot(perf, main='ROC')
+
+```
+
+
+# 12. Testing Model on random data  
+
+**Passing predictors:**     
+pelvic_incidence = **40.25020**  
+pelvic_tilt.numeric = **13.921907**  
+lumbar_lordosis_angle = **25.12495**  
+sacral_slope = **26.32829**  
+pelvic_radius = **130.32787**  
+degree_spondylolisthesis = **2.230652**      
+
+```{r testing}
+
+testdata = data.frame(pelvic_incidence=40.25020, pelvic_tilt.numeric=13.921907, lumbar_lordosis_angle=25.12495, sacral_slope=26.32829, pelvic_radius=130.32787, degree_spondylolisthesis=2.230652)
+
+glm.fit_mydata1
+result <- predict(glm.fit_mydata1, testdata, type="response")
+
+if (result>=0.0 & result < 0.50) {print('Abnormal')
+  
+}else {print('Normal')}
+
+```
+
+**For above predictors our Model classifies patient in Normal Category.**   
+
+**For testing this model pass parameters in** *'testdata'* **dataframe and run the model, you will get your patients class i.e.** *Normal or Abnormal*.
+
+
+
