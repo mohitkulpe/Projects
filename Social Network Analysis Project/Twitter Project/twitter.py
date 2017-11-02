@@ -41,7 +41,7 @@ def read_screen_names(filename):
         in the file.
 
     
-    ###TODO
+    """
     
 
     with open("candidates.txt", "rt") as in_file:
