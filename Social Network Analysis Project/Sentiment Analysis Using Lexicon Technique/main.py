@@ -1,27 +1,6 @@
 # coding: utf-8
 
-"""
-CS579: Assignment 2
 
-In this assignment, you will build a text classifier to determine whether a
-movie review is expressing positive or negative sentiment. The data come from
-the website IMDB.com.
-
-You'll write code to preprocess the data in different ways (creating different
-features), then compare the cross-validation accuracy of each approach. Then,
-you'll compute accuracy on a test set and do some analysis of the errors.
-
-The main method takes about 40 seconds for me to run on my laptop. Places to
-check for inefficiency include the vectorize function and the
-eval_all_combinations function.
-
-Complete the 14 methods below, indicated by TODO.
-
-As usual, completing one method at a time, and debugging with doctests, should
-help.
-"""
-
-# No imports allowed besides these.
 from collections import Counter, defaultdict
 from itertools import chain, combinations
 import glob
@@ -39,9 +18,9 @@ import urllib.request
 
 def download_data():
     """ Download and unzip data.
-    DONE ALREADY.
     """
-    url = 'https://www.dropbox.com/s/xk4glpk61q3qrg2/imdb.tgz?dl=1'
+    # URL of database
+    url = 'https://www.xyz.com/.../imdb.tgz'
     urllib.request.urlretrieve(url, 'imdb.tgz')
     tar = tarfile.open("imdb.tgz")
     tar.extractall()
@@ -52,8 +31,7 @@ def read_data(path):
     """
     Walks all subdirectories of this path and reads all
     the text files and labels.
-    DONE ALREADY.
-
+   
     Params:
       path....path to files
     Returns:
@@ -62,12 +40,7 @@ def read_data(path):
                Inferred from file path (i.e., if it contains
                'pos', it is 1, else 0)
     """
-    fnames = sorted([f for f in glob.glob(os.path.join(path, 'pos', '*.txt'))])
-    data = [(1, open(f).readlines()[0]) for f in sorted(fnames)]
-    fnames = sorted([f for f in glob.glob(os.path.join(path, 'neg', '*.txt'))])
-    data += [(0, open(f).readlines()[0]) for f in sorted(fnames)]
-    data = sorted(data, key=lambda x: x[1])
-    return np.array([d[1] for d in data]), np.array([d[0] for d in data])
+    
 
 
 def tokenize(doc, keep_internal_punct=False):
@@ -86,15 +59,9 @@ def tokenize(doc, keep_internal_punct=False):
     Returns:
       a numpy array containing the resulting tokens.
 
-    >>> tokenize(" Hi there! Isn't this fun?", keep_internal_punct=False)
-    array(['hi', 'there', 'isn', 't', 'this', 'fun'], 
-          dtype='<U5')
-    >>> tokenize("Hi there! Isn't this fun? ", keep_internal_punct=True)
-    array(['hi', 'there', "isn't", 'this', 'fun'], 
-          dtype='<U5')
-    """
-    ###TODO
     
+    """
+   
     doc = doc.lower()
     
     if keep_internal_punct == False:
@@ -138,12 +105,9 @@ def token_features(tokens, feats):
     Returns:
       nothing; feats is modified in place.
 
-    >>> feats = defaultdict(lambda: 0)
-    >>> token_features(['hi', 'there', 'hi'], feats)
-    >>> sorted(feats.items())
-    [('token=hi', 2), ('token=there', 1)]
+    
     """
-    ###TODO
+    
     
     for t in tokens:
         s = 'token='+t
@@ -180,12 +144,9 @@ def token_pair_features(tokens, feats, k=3):
     Returns:
       nothing; feats is modified in place.
 
-    >>> feats = defaultdict(lambda: 0)
-    >>> token_pair_features(np.array(['a', 'b', 'c', 'd']), feats)
-    >>> sorted(feats.items())
-    [('token_pair=a__b', 1), ('token_pair=a__c', 1), ('token_pair=b__c', 2), ('token_pair=b__d', 1), ('token_pair=c__d', 1)]
+   
     """
-    ###TODO
+    
     
     win_num = len(tokens)-k+1
     c = Counter()
@@ -212,6 +173,7 @@ def token_pair_features(tokens, feats, k=3):
 neg_words = set(['bad', 'hate', 'horrible', 'worst', 'boring'])
 pos_words = set(['awesome', 'amazing', 'best', 'good', 'great', 'love', 'wonderful'])
 
+
 def lexicon_features(tokens, feats):
     """
     Add features indicating how many time a token appears that matches either
@@ -224,14 +186,9 @@ def lexicon_features(tokens, feats):
     Returns:
       nothing; feats is modified in place.
 
-    In this example, 'LOVE' and 'great' match the pos_words,
-    and 'boring' matches the neg_words list.
-    >>> feats = defaultdict(lambda: 0)
-    >>> lexicon_features(np.array(['i', 'LOVE', 'this', 'great', 'boring', 'movie']), feats)
-    >>> sorted(feats.items())
-    [('neg_words', 1), ('pos_words', 2)]
+    
     """
-    ###TODO
+   
     
     lower_tokens = [t.lower() for t in tokens]
 
@@ -266,11 +223,8 @@ def featurize(tokens, feature_fns):
       list of (feature, value) tuples, SORTED alphabetically
       by the feature name.
 
-    >>> feats = featurize(np.array(['i', 'LOVE', 'this', 'great', 'movie']), [token_features, lexicon_features])
-    >>> feats
-    [('neg_words', 0), ('pos_words', 2), ('token=LOVE', 1), ('token=great', 1), ('token=i', 1), ('token=movie', 1), ('token=this', 1)]
+    
     """
-    ###TODO
     
     feats = defaultdict(lambda: 0)
     
@@ -304,19 +258,9 @@ def vectorize(tokens_list, feature_fns, min_freq, vocab=None):
       "token=great" is column 0 and "token=horrible" is column 1
       because "great" < "horrible" alphabetically),
 
-    >>> docs = ["Isn't this movie great?", "Horrible, horrible movie"]
-    >>> tokens_list = [tokenize(d) for d in docs]
-    >>> feature_fns = [token_features]
-    >>> X, vocab = vectorize(tokens_list, feature_fns, min_freq=1)
-    >>> type(X)
-    <class 'scipy.sparse.csr.csr_matrix'>
-    >>> X.toarray()
-    array([[1, 0, 1, 1, 1, 1],
-           [0, 2, 0, 1, 0, 0]], dtype=int64)
-    >>> sorted(vocab.items(), key=lambda x: x[1])
-    [('token=great', 0), ('token=horrible', 1), ('token=isn', 2), ('token=movie', 3), ('token=t', 4), ('token=this', 5)]
+    
     """
-    ###TODO
+    
     
     if vocab == None:
         
@@ -420,12 +364,12 @@ def vectorize(tokens_list, feature_fns, min_freq, vocab=None):
         return X,vocab
     
     
-    #pass
+    pass
 
 
 def accuracy_score(truth, predicted):
     """ Compute accuracy of predictions.
-    DONE ALREADY
+    
     Params:
       truth.......array of true labels (0 or 1)
       predicted...array of predicted labels (0 or 1)
@@ -449,7 +393,7 @@ def cross_validation_accuracy(clf, X, labels, k):
       The average testing accuracy of the classifier
       over each fold of cross-validation.
     """
-    ###TODO
+    
     
     kf = KFold(len(labels),k)
     accuracy_list = []
@@ -504,9 +448,9 @@ def eval_all_combinations(docs, labels, punct_vals,
 
       This list should be SORTED in descending order of accuracy.
 
-      This function will take a bit longer to run (~20s for me).
+      
     """
-    ###TODO
+    
     
     combination_list = []
     
@@ -549,7 +493,7 @@ def plot_sorted_accuracies(results):
     in ascending order of accuracy.
     Save to "accuracies.png".
     """
-    ###TODO
+    
     
     sorted_accs = sorted(results,key = lambda d:d['accuracy'])
     point_list = []
@@ -579,7 +523,7 @@ def mean_accuracy_per_setting(results):
       A list of (accuracy, setting) tuples, SORTED in
       descending order of accuracy.
     """
-    ###TODO
+    
     
     attr = defaultdict(list)
     
@@ -630,7 +574,7 @@ def fit_best_classifier(docs, labels, best_result):
             training data.
       vocab...The dict from feature name to column index.
     """
-    ###TODO
+    
     
     token = [tokenize(d, keep_internal_punct=best_result["punct"]) for d in docs]
     
@@ -662,7 +606,7 @@ def top_coefs(clf, label, n, vocab):
       in descending order of the coefficient for the
       given class label.
     """
-    ###TODO
+    
     
     reverse_vocab = defaultdict()
     clf_model = clf.coef_[0]
@@ -726,7 +670,7 @@ def parse_test_data(best_result, vocab):
                     in the test data. Each row is a document,
                     each column is a feature.
     """
-    ###TODO
+    
     
     docs,labels = read_data(os.path.join('data', 'test'))
     
@@ -763,7 +707,7 @@ def print_top_misclassified(test_docs, test_labels, X_test, clf, n):
     Returns:
       Nothing; see Log.txt for example printed output.
     """
-    ###TODO
+    
     
     mis_result = []
     pred = clf.predict(X_test)
@@ -796,10 +740,8 @@ def print_top_misclassified(test_docs, test_labels, X_test, clf, n):
 
 
 def main():
-    """
-    Put it all together.
-    ALREADY DONE.
-    """
+    
+    
     feature_fns = [token_features, token_pair_features, lexicon_features]
     # Download and read data.
     download_data()
