@@ -432,7 +432,7 @@ def read_screen_names(filename):
     ###TODO
     
 
-    with open("C:/Users/Mohit/mohitkulpe/a0/candidates.txt", "rt") as in_file:
+    with open("candidates.txt", "rt") as in_file:
         MyList = [line.strip('\n') for line in in_file]
         
     return(MyList)
