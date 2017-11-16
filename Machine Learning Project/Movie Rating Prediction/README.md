@@ -1,7 +1,7 @@
 
 Movie Ratings Prediction using Genre as a Content
 
-Here I've implement a content-based recommendation algorithm.
+Here I've implemented a content-based recommendation algorithm.
 It will use the list of genres for a movie as the content.
 Then Cosine similarity will be used to find nearest items.
 
