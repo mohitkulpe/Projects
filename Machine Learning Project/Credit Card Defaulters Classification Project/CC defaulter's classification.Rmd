@@ -1,0 +1,613 @@
+---
+title: "Loan Defaulter's Classification Project"
+author: "Mohit kulpe"
+date: "November 27, 2017"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Loading Libraries
+```{r library}
+
+library(ggplot2)
+library(caret)
+library(corrplot)
+library(grid)
+library(gridExtra)
+library(reshape)
+library(ROCR)
+library(glmnet)      
+library(MASS)        
+library(e1071)       
+library(rpart)       
+library(rpart.plot)
+library(RColorBrewer)
+library(randomForest)
+
+
+```
+
+
+## Declaring Functions
+
+```{r function}
+
+# Common Functions
+set.seed(24287)
+
+bindModel <- function(yLabel, xFeatures){
+  # Automates the creation of feature model to be passed into an Classifier or Predictive Model  
+  return (as.formula(paste(yLabel, "~", paste(xFeatures, collapse = '+ '))))
+}
+
+
+# Takes the complete dataframe as an input including the label column
+factorToDummy_DF_Builder <- function (dataFrameIN, numericCols, factorCols, labelCol){
+  # Creates a design matrix by expanding the factors to a set of dummy variables and interaction etc.
+  xNumeric <- dataFrameIN[, numericCols]
+  xFactor <- dataFrameIN[, c(factorCols,labelCol)]
+  
+  factorModel <- bindModel(yLabel=labelCol, xFeatures=factorCols)
+  xFactor <- model.matrix(factorModel, data=xFactor)[, -1]        # -1 is provided to exclude the intercept term from the matrix
+  yLabel <- dataFrameIN[labelCol]
+  return (data.frame(xNumeric, xFactor, yLabel))
+}
+
+
+stratifiedSampling <- function(dataIN, sample_on_col, trainPrcnt){
+  trainIndices <- createDataPartition(y=dataIN[[sample_on_col]], p=trainPrcnt, list=FALSE)
+  trainData <- dataIN[trainIndices,]
+  testData <- dataIN[-trainIndices,]
+  
+  stopifnot(nrow(trainData) + nrow(testData) == nrow(dataIN))
+  return (list(trainData, testData))
+}
+
+
+# Plot and calculate the acuracy, precision and recall for different range of cut-offs
+
+performanceMetric <- function (cutoffRange, y, y_hat){
+  y_bin <- y_hat
+  actualYesIndex <- which(y==1)
+  perfMetric <- matrix(0,length(cutoffRange),3)   
+  for (i in 1:length(cutoffRange)){
+    predYesIndex <- which(y_hat>=cutoffRange[i])
+    bothYesIndex <- intersect(actualYesIndex,predYesIndex)
+    
+    # Get the Binomial prediction based on cut-off value
+    y_bin[predYesIndex] <- 1
+    y_bin[-predYesIndex] <- 0
+    
+    # Calculate the accuracy, precision and recall
+    accuracy <- length(which(y_bin == y))/length(y)
+    precision <- length(bothYesIndex)/length(predYesIndex)
+    recall <- length(bothYesIndex)/length(actualYesIndex)
+    cbind(accuracy, precision, recall)
+    
+    perfMetric[i,] <- cbind(accuracy, precision, recall)
+  }
+  
+  return (perfMetric)
+  
+}
+
+
+# Changing the datatypes
+changeDataType <- function(dataIN, featureNames, type){
+  if (type=='factor'){
+    dataIN[featureNames] <- lapply(dataIN[featureNames], factor)
+  }
+  else if (type=='numeric'){
+    dataIN[featureNames] <- lapply(dataIN[featureNames], as.numeric)
+  }
+  else{
+    print ('No Type Specified! Specify a Type Factor or Numeric')
+  }
+  return (dataIN)
+}
+
+
+aicCompute <- function(fullModel, dataIN){
+  glmIN <- glm(fullModel, data = dataIN)
+  aic <- AIC(glmIN)
+  return (aic) 
+}
+
+
+
+backwardSelection <- function(features, label, dataIN){
+  featuresIN <- features
+  while (TRUE){
+    fullModel <- bindModel(label, featuresIN)
+    aic_main <- aicCompute(fullModel, dataIN)
+  
+    intermediateAIC <- c()
+    for (j in (1:length(featuresIN))){
+      newFeatureSet <- featuresIN[-j]
+      newModel <- bindModel(label, newFeatureSet)
+      aicNew <- aicCompute(newModel, dataIN)
+      intermediateAIC <- c(intermediateAIC, aicNew)
+    }
+    
+    
+    badFeatureIndex <- which(intermediateAIC == min(intermediateAIC))
+    featuresIN <- featuresIN[-badFeatureIndex]
+    
+    if (aic_main < min(intermediateAIC)){
+      return (fullModel)
+    }
+  }
+}
+
+
+plotPerfMetric <- function(performanceDF, cutoffRange){
+  p <- ggplot() + 
+    geom_line(data = performanceDF, aes(x = cutoffRange, y = accuracy, color = "accuracy")) +
+    geom_line(data = performanceDF, aes(x = cutoffRange, y = precision, color = "precision")) +
+    geom_line(data = performanceDF, aes(x = cutoffRange, y = recall, color = "recall")) +
+    xlab('Cutoff') +
+    ylab('percent.change')
+  return (p)
+}
+
+```
+
+
+##Loading Data
+
+```{r load_data}
+
+dir<- 'C:/Users/Mohit/Documents/R/Dataset/credit_card_dataset.csv'
+data <- read.csv (dir,header = TRUE)
+head(data)
+
+```
+
+
+##Data Preprocessing
+
+```{r data_pp}
+
+
+# Remove the ID column:
+credit.data <- subset(data, select=-c(ID))
+head(credit.data)
+dim(credit.data)
+
+# Change the label column name
+colnames(credit.data)[24] <- "default"
+
+
+# Identifying Categorical, numerical & Logical element
+
+uniqueCount <- function (feature){
+  return (length(unlist(unique(credit.data[feature]))))
+} 
+sapply(colnames(credit.data), FUN=uniqueCount)
+
+```
+
+**It seems that [sex, education, marriage, age], [PAY_0,PAY_2,PAY_3,PAY_4,PAY_5,PAY_6] are nominal There's is only one logical variable "default" as it can take only two value either "Yes (True)" or "No (False)"**   
+
+
+```{r dp1}
+
+numericCols <- names(which(sapply(credit.data, is.numeric)))
+nominalCols <- names(which(sapply(credit.data, is.factor)))
+print (nrow(credit.data))
+print (ncol(credit.data))
+
+
+# Convert into Proper datatypes
+credit.nominalCols <- c('SEX','EDUCATION','MARRIAGE')
+credit.numericCols <- setdiff(colnames(credit.data), credit.nominalCols)
+credit.data <- changeDataType(credit.data, credit.nominalCols, type='factor')
+credit.data <- changeDataType(credit.data, credit.numericCols, type='numeric')
+
+
+# CAPTURE Numeric and nominal and the label Columns
+credit.labelCol <- 'default'
+credit.numericCols <- setdiff(names(which(sapply(credit.data, is.numeric))), credit.labelCol)
+credit.nominalCols <- names(which(sapply(credit.data, is.factor)))
+
+str(credit.data)
+credit.labelCol
+credit.numericCols
+credit.nominalCols
+
+#Check if data is missing
+
+which(is.na(credit.data))
+
+```
+
+
+##Exploratory Data Analysis
+
+```{r eda}
+
+# iv. Perform all required EDA on this data set.
+
+# ScatterPlot
+set.seed(24287)
+samplePrcntg <- 0.10
+credit.sampleIndices <- createDataPartition(y = credit.data$default, p=samplePrcntg, list=FALSE)
+credit.sample <- credit.data[credit.sampleIndices , ]
+
+head(credit.sample)
+nrow(credit.sample)
+
+
+# Correlation Matrix
+options(repr.plot.width=15, repr.plot.height=10)
+credit.cor_matrix <- cor(credit.data[, c(credit.numericCols, credit.labelCol)]) 
+corrplot(credit.cor_matrix, method="number")
+
+
+#Box Plot
+options(repr.plot.width=10, repr.plot.height=15)
+par(mfrow=c(2,2))
+crearteBoxPlots <- function (column_name, dataIN){
+ 
+  boxplot(dataIN[column_name], horizontal = FALSE,  main= column_name)
+ 
+} 
+a <- sapply(credit.numericCols, FUN=crearteBoxPlots, dataIN=credit.sample)
+
+
+#Histogram
+options(repr.plot.width=10, repr.plot.height=10)
+ggplot(data = melt(credit.data[, credit.numericCols]), mapping = aes(x = value)) + 
+geom_histogram(bins = 10) + facet_wrap(~variable, scales = 'free_x')
+
+
+#Bar plot
+options(repr.plot.width=10, repr.plot.height=5)
+par(mfrow=c(1,3))
+barPlots <- function(featureVector, dataIN){
+  tab <- table(dataIN[featureVector])
+  barplot(tab, main=featureVector, xlab="Feature Categories")
+}
+sapply(credit.nominalCols, FUN=barPlots, credit.data)
+
+
+options(repr.plot.width=10, repr.plot.height=10)
+par(mfrow=c(3,1))
+crossTab_barplots <- function(featureVector, dataIN, labelCol){
+  tab <- table(dataIN[[featureVector]], dataIN[[labelCol]]) 
+  barplot(tab, main=featureVector,
+          xlab=labelCol,
+          legend = rownames(tab), beside=TRUE)
+}
+
+sapply(credit.nominalCols, FUN=crossTab_barplots, credit.data, 'default')
+
+```
+
+
+##Scaling data
+
+```{r scale}
+
+credit.data.scaledNumeric <- scale(credit.data[credit.numericCols])
+
+# Check if the mean is 0 and is unit variance
+stopifnot(colMeans(credit.data.scaledNumeric) != 0)
+stopifnot(round(apply(credit.data.scaledNumeric, 2, sd)) == 1)
+
+credit.data.scaled <- cbind(credit.data[credit.nominalCols], credit.data.scaledNumeric, credit.data['default'])
+
+head(credit.data)
+head(credit.data.scaled)
+
+```
+
+
+##Splitting Data
+
+```{r spli}
+
+# Splitting data into Training & Testing set
+
+# Get the Null model and the Full model
+credit.dataIN <- credit.data.scaled
+credit.null.model <- as.formula(paste('default', "~", 1))
+credit.full.model <- bindModel(yLabel = 'default',xFeatures = c(credit.nominalCols, credit.numericCols))
+
+credit.null.model
+credit.full.model
+
+# Get the Train Test Data
+dataOUT <- stratifiedSampling(dataIN=credit.dataIN, sample_on_col='default', trainPrcnt = 0.8)
+
+credit.trainData.sc <- dataOUT[[1]]
+credit.testData.sc <- dataOUT[[2]]
+nrow(credit.trainData.sc)
+nrow(credit.testData.sc)
+head(credit.trainData.sc)
+
+
+# Train and Test for the Dummy variable:
+
+credit.data.dummy <- factorToDummy_DF_Builder(dataFrameIN = credit.data.scaled, 
+                                              numericCols = credit.numericCols, 
+                                              factorCols = credit.nominalCols,
+                                              labelCol = credit.labelCol)
+
+# credit.data.dummy
+dataOUT <- stratifiedSampling(dataIN = credit.data.dummy, sample_on_col = credit.labelCol, trainPrcnt = 0.8)
+credit.trainData.dummy <- dataOUT[[1]]
+credit.testData.dummy  <- dataOUT[[2]]
+
+nrow(credit.trainData.dummy)
+nrow(credit.testData.dummy)
+head(credit.testData.dummy)
+
+```
+
+
+
+##Fitting GLM Model
+
+```{r glm1}
+
+# Fitting Model GLM
+
+credit.glm.null <- glm(formula=credit.null.model, family=binomial(logit), data=credit.trainData.sc)
+summary(credit.glm.null)
+
+credit.glm.full <- glm(formula=credit.full.model, family=binomial(logit), data=credit.trainData.sc)
+summary(credit.glm.full)
+
+# Predict for the Full model
+credit.testData.sc$defaultPred <- predict(credit.glm.full, newdata=credit.testData.sc, type="response")
+
+```
+
+
+```{r plot_glm1}
+
+# Range for cuttoff
+cutoffRange <- seq(.01,.99,length=1000)
+perfMatrix <- performanceMetric(cutoffRange, credit.testData.sc$default, credit.testData.sc$defaultPred)
+perfDF <- data.frame(perfMatrix)
+names(perfDF) <- c('accuracy', 'precision', 'recall')
+head(perfDF)
+
+# Plot Accuracy, precision and recall
+par(mfrow=c(1,1))
+options(repr.plot.width=6, repr.plot.height=4)
+p <- plotPerfMetric(perfDF, cutoffRange)
+p
+
+```
+
+
+## GLM With Forward selection
+
+```{r glm_f}
+
+# GLM with Forward Selection
+
+credit.glm.forward = step(credit.glm.null,scope=list(lower=credit.null.model,upper=formula(credit.full.model)), direction="forward")
+credit.glm.fowardbestModel <- formula(credit.glm.forward)
+
+credit.glm.full.forward <- glm(formula=credit.glm.fowardbestModel, family=binomial(logit), data=credit.trainData.sc)
+
+# Predict for the Full model
+credit.testData.sc$defaultPredForward <- predict(credit.glm.full.forward, newdata=credit.testData.sc, type="response")
+
+```
+
+```{r plot_glm_f}
+
+# Range for cuttoff
+cutoffRange <- seq(.01,.99,length=1000)
+perfMatrix <- performanceMetric(cutoffRange, credit.testData.sc$default, credit.testData.sc$defaultPredForward)
+perfDF <- data.frame(perfMatrix)
+names(perfDF) <- c('accuracy', 'precision', 'recall')
+head(perfDF)
+
+# Plot Accuracy, precision and recall
+par(mfrow=c(1,1))
+options(repr.plot.width=6, repr.plot.height=4)
+p <- plotPerfMetric(perfDF, cutoffRange)
+p
+
+```
+
+
+##Fitting GLM With Backward selection
+
+```{r glm_b}
+
+
+allFeatures <- c(credit.nominalCols, credit.numericCols)
+print (length(allFeatures))
+
+bestModel <- backwardSelection(features=allFeatures, label=credit.labelCol, dataIN=credit.data)
+bestModel
+
+credit.glm.backward.manual <- glm(formula=bestModel, family=binomial(logit), data=credit.trainData.sc)
+credit.testData.sc$defaultPredBackward_Manual <- predict(credit.glm.backward.manual, newdata=credit.testData.sc, type="response")
+
+```
+
+```{r plot_glm_b}
+
+
+# Range for cuttoff
+cutoffRange <- seq(.01,.99,length=1000)
+perfMatrix <- performanceMetric(cutoffRange, credit.testData.sc$default, credit.testData.sc$defaultPredBackward_Manual)
+perfDF <- data.frame(perfMatrix)
+names(perfDF) <- c('accuracy', 'precision', 'recall')
+head(perfDF)
+
+# Plot Accuracy, precision and recall
+par(mfrow=c(1,1))
+options(repr.plot.width=6, repr.plot.height=4)
+p <- plotPerfMetric(perfDF, cutoffRange)
+p
+
+```
+
+
+##Ridge regression
+
+```{r ridge}
+
+
+# Split the label from the Train and Test Data
+xTrainData <- credit.trainData.dummy[, -which(names(credit.trainData.dummy) == credit.labelCol)]
+yTrainLabel <- credit.trainData.dummy[credit.labelCol]
+xTestData <- credit.testData.dummy[, -which(names(credit.testData.dummy) == credit.labelCol)]
+yTestLabel <- credit.testData.dummy[credit.labelCol]
+
+credit.ridge.full <- lm.ridge(formula=credit.full.model, data=credit.data.scaled, lambda = seq(0,1,10))
+select(credit.ridge.full)
+
+# Find the best lambda and predict on that lambda for the test set.
+credit.ridge.cv <- cv.glmnet(x=as.matrix(xTrainData), y=as.matrix(yTrainLabel), alpha=0, family='binomial')
+lambdaBest <- credit.ridge.cv$lambda.min
+credit.ridge.fit <- glmnet(x=as.matrix(xTrainData), y=as.matrix(yTrainLabel), alpha=0, lambda=credit.ridge.cv$lambda.min, family='binomial')
+credit.ridge.predict <- predict(credit.ridge.fit, newx = as.matrix(xTestData), s = lambdaBest, type = "response") 
+
+options(repr.plot.width=10, repr.plot.height=4)
+par(mfrow=c(1,1))
+plot(credit.ridge.cv, main="RIDGE")
+
+```
+
+
+```{r plot_ridge}
+
+# Range for cuttoff
+cutoffRange <- seq(.01,.99,length=1000)
+perfMatrix <- performanceMetric(cutoffRange = cutoffRange, 
+                                y = yTestLabel$default, 
+                                y_hat = unlist(credit.ridge.predict))
+
+perfDF <- data.frame(perfMatrix)
+names(perfDF) <- c('accuracy', 'precision', 'recall')
+head(perfDF)
+
+# Plot Accuracy, precision and recall
+par(mfrow=c(1,1))
+options(repr.plot.width=6, repr.plot.height=4)
+p <- plotPerfMetric(perfDF, cutoffRange)
+p
+
+```
+
+
+
+##LASSO Regression
+
+```{r lasso}
+
+credit.lasso.cv = cv.glmnet(x=as.matrix(xTrainData), y=as.matrix(yTrainLabel), alpha=1, family='binomial')
+credit.lasso.predict <- predict(credit.lasso.cv, newx = as.matrix(xTestData), s = "lambda.min", type = "response")
+options(repr.plot.width=10, repr.plot.height=4)
+par(mfrow=c(1,1))
+plot(credit.lasso.cv, main="LASSO")
+
+```
+
+
+```{r plot_lasso}
+
+# Range for cuttoff
+cutoffRange <- seq(.01,.99,length=1000)
+perfMatrix <- performanceMetric(cutoffRange = cutoffRange, 
+                                y = yTestLabel$default, 
+                                y_hat = unlist(credit.lasso.predict))
+
+perfDF <- data.frame(perfMatrix)
+names(perfDF) <- c('accuracy', 'precision', 'recall')
+head(perfDF)
+
+# Plot Accuracy, precision and recall
+par(mfrow=c(1,1))
+options(repr.plot.width=6, repr.plot.height=4)
+p <- plotPerfMetric(perfDF, cutoffRange)
+p
+
+```
+
+
+##Splitting Unscaled data for Decision tree & Random Forest
+
+```{r split_us}
+
+credit.dataIN <- credit.data
+credit.null.model <- as.formula(paste('default', "~", 1))
+credit.full.model <- bindModel(yLabel = 'default',xFeatures = c(credit.nominalCols, credit.numericCols))
+
+credit.null.model
+credit.full.model
+
+
+# Get the Train Test Data
+dataOUT <- stratifiedSampling(dataIN=credit.dataIN, sample_on_col='default', trainPrcnt = 0.8)
+
+credit.trainData <- dataOUT[[1]]
+credit.testData <- dataOUT[[2]]
+nrow(credit.trainData)
+nrow(credit.testData)
+head(credit.trainData)
+
+```
+
+
+##Decision Tree
+
+```{r dt}
+
+credit.dt.fit <- rpart(credit.full.model, data=credit.trainData, method="class")
+credit.dt.fit
+credit.dt.predict <- predict(credit.dt.fit, credit.testData, type = "class")
+credit.testData$defaultPredDT <- credit.dt.predict
+
+CM <- confusionMatrix(reference = credit.testData$default, data = credit.testData$defaultPredDT, positive = "1", mode='prec_recall')
+CM
+```
+
+
+
+##Random forest
+
+```{r rf}
+
+x <- subset(credit.trainData, select=-c(default))
+y <- as.factor(as.character(credit.trainData$default))
+
+
+credit.rf.fit <- randomForest(x = x, y = y, importance = TRUE, ntree = 200)
+
+credit.rf.predict <- predict(credit.rf.fit, credit.testData, type = "response")
+
+credit.testData$defaultPredRF1 <- credit.rf.predict
+
+
+CM1 = confusionMatrix(reference = credit.testData$default, 
+                data = credit.testData$defaultPredRF1, 
+                positive = "1", 
+                mode='prec_recall')
+CM1
+
+```
+
+
+
+
+###CONCLUSION:
+###Logistic Regression (RIDGE) gives the best model performance at threshold approximately 0.27. The accuracy is seen as approximately 77%.
+
+###Decision tree model performs better than logistic regression with accuracy of 81.52%, but worse than random forest and it makes sense because it is prone to both overfitting and under fitting.
+
+###Random Forest model on the other hand produces outstanding result with an accuracy of 83.56%, precision of 0.9624 and a recall of 0.8227. This makes sense because random forests average the output from many decision tress which makes it robust to overfitting. Therefore, despite the training error were high the random forest model does an outstanding job in classifying the test data.
+
+
