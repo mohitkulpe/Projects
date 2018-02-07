@@ -1,0 +1,18 @@
+Number of users collected: 735
+Number of messages collected: 976
+Number of communities discovered: 20
+Average number of users per community: 33
+Number of instances per class found:
+		    Positive Class :396
+		    Negative Class :400
+
+One example from each class:
+	Example from Positive Class:
+	Tweet: RT @AILANational: New York Times op-ed: Is Anyone Good Enough for an #H1B Visa? https://t.co/XxFPr2iDbF
+	positive value: 3
+	negative value: 0
+
+	Example from Negative Class:
+	Tweet: @RT_America Probably because they're written by a bunch of fucking #h1b s.
+	positive value: 0
+	negative value: 4
