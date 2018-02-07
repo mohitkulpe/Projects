@@ -4,13 +4,21 @@ This Project will do a more open-ended exploration of online social networking.
 
 Here is what each script do:
 
-- `collect.py`: This should collect data used in your analysis. This may mean submitting queries to Twitter or Facebook API, or scraping webpages. The data should be raw and come directly from the original source -- that is, you may not use data that others have already collected and processed for you (e.g., you may not use [SNAP](http://snap.stanford.edu/data/index.html) datasets). Running this script should create a file or files containing the data that you need for the subsequent phases of analysis.
+- collect.py: 
+           Main objective of collect.py is to gather (collect) data. I have used twitter API to collect data, this python script takes control of twitter API by passing Consumer Token & sceret key using get_twitter() method for establishing a twitter connection. Now here I am Collecting  tweets with search/tweets function by using keyword 'h1b' & limiting it by 1000 with max_id. After collecting data (tweets) I saved it in collected_tweets.pkl. In addition to that I generated text file named network.txt in which I have saved user ids based on the screen names whose user profile is not protected, this file will be used for creating clusters (Communities). 
 
-- `cluster.py`: This should read the data collected in the previous steps and use any community detection algorithm to cluster users into communities. You may write any files you need to save the results.
 
-- `classify.py`: This should classify your data along any dimension of your choosing (e.g., sentiment, gender, spam, etc.). You may write any files you need to save the results.
+- 'cluster.py:
+           Main objective of cluster.py is to create clusters. This python script imports network.txt & clusters users based on the screen names and ids. First it creates a graph with  edges as the screen names and id & then it takes the connected components of the subgraph. This subgraph is done by using girvan_newman algorithm. After creating subgraphs this script saves the list of divided components to the pickle file named 'clusters.pkl'.
 
-- `summarize.py`: This should read the output of the previous methods to write a textfile called `summary.txt` containing the following entries:
+
+- classify.py:
+           Main objective of classify.py is to classify data into different classes. This python script imports data from the clusters.pkl also it takes positive & negative data from the AFINN. Tweets are first strip using tokenize function. After that positive & negative counts are retrieved then converting that tweet into positive or negative by comparing positive counts with negative counts. Then vocab is created by using vocabulary function then converting vocab into CSR Matrix. Then cross validation is done by using kfold method to find accuracy of classifier, here I have used Logistic Regression classifier. In this assignment I tried to classify tweets based on who supports 'h1b' and who not using positive & negative words.
+
+
+- summarize.py:
+             Main objective of summarize.py is to display the result of overall assignment. This python script imports 'collected_tweets.pkl', 'clusters.pkl' and 'classifier.pkl' from which tweet related information is extracted from 'collected_tweets.pkl', Communities related information is extracted from 'clusters.pkl' and Classification related information is extracted from 'classifier.pkl'.
+
   - Number of users collected:
   - Number of messages collected:
   - Number of communities discovered:
