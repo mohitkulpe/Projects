@@ -7,10 +7,10 @@ import pickle
 import sys
 import time
 
-consumer_key = 'C2ISeFBbVenzkDKMKEt4yvaQ5'
-consumer_secret = 'AHXDtXUKjM42XGrpertWQhfdEndunyZLmmDpuLH3g2fz0JfMQf'
-access_token = '902373884674142209-f0G75kPXcD7JcwDOoZepoyOFrph9EW2'
-access_token_secret = '6HGwwqwyUZtveTX3cpmCjtLKiFGdn4UGysOssGRrO7MEZ'
+consumer_key = 'Enter your consumer key'
+consumer_secret = 'Enter your secret key'
+access_token = 'Enter your access token'
+access_token_secret = 'Enter your access token secret key'
 
 
 def get_twitter():
